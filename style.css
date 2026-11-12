@@ -194,6 +194,35 @@ button.secondary {
   font-weight: 600;
 }
 
+.howto-wrap {
+  margin-top: 4px;
+}
+
+.howto-toggle {
+  background: none;
+  border: none;
+  color: var(--accent-hover);
+  padding: 2px 0;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.howto-toggle:hover {
+  background: none;
+  text-decoration: underline;
+}
+
+.exercise-howto {
+  margin: 6px 0 0;
+  font-size: 0.85rem;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.exercise-howto.hidden {
+  display: none;
+}
+
 .complete-row {
   display: flex;
   align-items: center;
