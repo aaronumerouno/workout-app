@@ -53,7 +53,7 @@
 
 ## Rest Days (Sun/Thu)
 
-Optional light walk, stretching, or foam rolling. No lifting.
+Optional light walk, stretching, or foam rolling. No lifting required. If you're feeling up for it, the app offers a "Train anyway" bonus full-body session (deadlift, floor press, goblet squat, one-arm row, plank) you can opt into without changing the recurring schedule.
 
 ## Progression Rule
 

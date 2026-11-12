@@ -64,6 +64,18 @@ const WORKOUT_PLAN = {
   0: { name: "Rest / Active Recovery", type: "rest", exercises: [] }, // Sunday
 };
 
+const BONUS_WORKOUT = {
+  name: "Bonus Full Body (optional)",
+  type: "strength",
+  exercises: [
+    { name: "Dumbbell Deadlift", sets: 3, reps: 10, startWeight: 20 },
+    { name: "Dumbbell Floor Press", sets: 3, reps: 10, startWeight: 20 },
+    { name: "Dumbbell Goblet Squat", sets: 3, reps: 12, startWeight: 20 },
+    { name: "One-Arm Row", sets: 3, reps: 12, startWeight: 20 },
+    { name: "Plank", sets: 3, reps: "45s hold", startWeight: null },
+  ],
+};
+
 const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
 function loadData() {
@@ -109,24 +121,8 @@ function initTabs() {
 }
 
 // ---------- Today ----------
-function renderToday() {
-  const container = document.getElementById("today-content");
-  const dateISO = todayISO();
-  const dayIndex = new Date().getDay();
-  const plan = WORKOUT_PLAN[dayIndex];
+function renderWorkoutCard(container, plan, dateISO, dayIndex, isBonus) {
   const existingLog = appData.logs[dateISO] || { exercises: {}, completed: false };
-
-  if (plan.type === "rest") {
-    container.innerHTML = `
-      <div class="card">
-        <h2>${formatDate(dateISO)}</h2>
-        <div class="rest-day">
-          <div class="badge rest">Rest Day</div>
-          <p>${plan.name}. Optional light walk or stretching — no lifting today.</p>
-        </div>
-      </div>`;
-    return;
-  }
 
   const rows = plan.exercises.map((ex, i) => {
     const log = existingLog.exercises[ex.name] || {};
@@ -152,34 +148,68 @@ function renderToday() {
       </div>`;
   }).join("");
 
-  container.innerHTML = `
-    <div class="card">
-      <h2>${formatDate(dateISO)} — ${plan.name} <span class="badge ${plan.type}">${plan.type}</span></h2>
-      ${rows}
-      <div class="save-bar">
-        <button id="save-today">Save workout</button>
-        <span id="save-toast" class="toast"></span>
-      </div>
+  const card = document.createElement("div");
+  card.className = "card";
+  card.innerHTML = `
+    <h2>${formatDate(dateISO)} — ${plan.name} <span class="badge ${plan.type}">${plan.type}</span></h2>
+    ${rows}
+    <div class="save-bar">
+      <button class="save-today">Save workout</button>
+      <span class="save-toast toast"></span>
     </div>`;
 
-  container.querySelector("#save-today").addEventListener("click", () => {
-    const log = { exercises: {}, dayIndex, completed: true };
+  card.querySelector(".save-today").addEventListener("click", () => {
+    const log = { exercises: {}, dayIndex, completed: true, bonus: !!isBonus };
     plan.exercises.forEach((ex, i) => {
-      const weightInput = container.querySelector(`input[data-ex="${i}"][data-field="weight"]`);
-      const repsInput = container.querySelector(`input[data-ex="${i}"][data-field="actualReps"]`);
-      const doneInput = container.querySelector(`input[data-ex="${i}"][data-field="done"]`);
+      const weightInput = card.querySelector(`input[data-ex="${i}"][data-field="weight"]`);
+      const repsInput = card.querySelector(`input[data-ex="${i}"][data-field="actualReps"]`);
+      const doneInput = card.querySelector(`input[data-ex="${i}"][data-field="done"]`);
       log.exercises[ex.name] = {
         weight: weightInput ? parseFloat(weightInput.value) || null : null,
         actualReps: repsInput ? repsInput.value : "",
         done: doneInput ? doneInput.checked : false,
       };
     });
+    log.planName = plan.name;
     appData.logs[dateISO] = log;
     saveData(appData);
-    const toast = container.querySelector("#save-toast");
+    const toast = card.querySelector(".save-toast");
     toast.textContent = "Saved!";
     setTimeout(() => (toast.textContent = ""), 2000);
   });
+
+  container.appendChild(card);
+}
+
+function renderToday() {
+  const container = document.getElementById("today-content");
+  container.innerHTML = "";
+  const dateISO = todayISO();
+  const dayIndex = new Date().getDay();
+  const plan = WORKOUT_PLAN[dayIndex];
+
+  if (plan.type === "rest") {
+    const restCard = document.createElement("div");
+    restCard.className = "card";
+    restCard.innerHTML = `
+      <h2>${formatDate(dateISO)}</h2>
+      <div class="rest-day">
+        <div class="badge rest">Rest Day</div>
+        <p>${plan.name}. Optional light walk or stretching — no lifting today.</p>
+      </div>
+      <div class="save-bar">
+        <button class="secondary" id="train-anyway">Train anyway</button>
+      </div>`;
+    container.appendChild(restCard);
+
+    restCard.querySelector("#train-anyway").addEventListener("click", () => {
+      restCard.querySelector("#train-anyway").remove();
+      renderWorkoutCard(container, BONUS_WORKOUT, dateISO, dayIndex, true);
+    });
+    return;
+  }
+
+  renderWorkoutCard(container, plan, dateISO, dayIndex, false);
 }
 
 // ---------- Schedule ----------
@@ -289,7 +319,7 @@ function renderHistory() {
   }
   container.innerHTML = dates.map((date) => {
     const log = appData.logs[date];
-    const planName = WORKOUT_PLAN[log.dayIndex]?.name || "Workout";
+    const planName = log.planName || WORKOUT_PLAN[log.dayIndex]?.name || "Workout";
     const items = Object.entries(log.exercises || {}).map(([name, v]) =>
       `${name}: ${v.weight ? v.weight + "kg" : ""} ${v.actualReps ? "x " + v.actualReps : ""} ${v.done ? "✓" : ""}`
     ).join("<br>");
